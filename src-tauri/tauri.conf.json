@@ -41,9 +41,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "REEMPLAZAR_CON_CLAVE_PUBLICA",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ3MUFDMDgxNENGRkEzQzYKUldUR28vOU1nY0FhUi8zOTFHeWZaQkoxa3pGQld5UjRxS25VL213UklJMWVUVmI5eFcxa1pMb2UK",
       "endpoints": [
-        "https://github.com/TU_USUARIO/timer-count/releases/latest/download/latest.json"
+        "https://github.com/elramones13/timer-count/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"
