@@ -4,12 +4,8 @@
   "pub_date": "2025-12-01T12:00:00Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "REEMPLAZAR_CON_FIRMA_AARCH64",
-      "url": "https://github.com/TU_USUARIO/timer-count/releases/download/v0.1.0/Timer Count_0.1.0_aarch64.dmg"
-    },
-    "darwin-x86_64": {
-      "signature": "REEMPLAZAR_CON_FIRMA_X64",
-      "url": "https://github.com/TU_USUARIO/timer-count/releases/download/v0.1.0/Timer Count_0.1.0_x64.dmg"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIG1pbmlzaWduIHNlY3JldCBrZXkKUlVTUk9jSWR3WksxYnlLdFBXT3hBRC9GR3YvWkoyNC92U1psSS9YMDFTU3pnQ0xOSFpjSlVOd255dGNyRkkySGtCWGRUS21jbzBpMm5oYWdlaHlFYXlpbnN0VlNkeWlGY1FzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzY0NzE4MzcyCWZpbGU6VGltZXIgQ291bnRfMC4xLjBfYWFyY2g2NC5kbWcJaGFzaGVkCnBwYnhkS1pZd2pUOWE4MzRZTW5rZDBVUXNsMWdzcjhiajZhTGIrdlFleWd5STNHSDFJZXF6czU2VG9rNGVzQmRDV1FMSlhySTI4WTY1aldyQnZXbUFnPT0K",
+      "url": "https://github.com/elramones13/timer-count/releases/download/v0.1.0/Timer Count_0.1.0_aarch64.dmg"
     }
   }
 }
