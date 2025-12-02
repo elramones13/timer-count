@@ -4,7 +4,6 @@ import { useTauriCommands } from '../hooks/useTauriCommands';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/api/process';
 
 const Settings = () => {
   const tauri = useTauriCommands();
@@ -172,11 +171,8 @@ const Settings = () => {
       const update = await check();
 
       if (update) {
-        // Download and install the update
+        // Download and install the update (automatically relaunches the app)
         await update.downloadAndInstall();
-
-        // Relaunch the app to apply the update
-        await relaunch();
       }
     } catch (error) {
       console.error('Error installing update:', error);

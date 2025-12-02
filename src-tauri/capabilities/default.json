@@ -13,6 +13,10 @@
     "notification:default",
     "fs:default",
     "fs:allow-write-text-file",
-    "fs:allow-resource-read"
+    "fs:allow-resource-read",
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download",
+    "updater:allow-install"
   ]
 }

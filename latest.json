@@ -1,0 +1,15 @@
+{
+  "version": "0.1.0",
+  "notes": "## 🎉 Primera versión de Timer Count\n\n### ✨ Características principales\n\n- ⏱️ Temporizador de múltiples proyectos simultáneos\n- 📊 Gestión completa de proyectos y clientes\n- 💾 Exportación de datos (JSON y PDF)\n- 🔄 Actualizaciones automáticas\n- 🔔 Notificaciones y alarmas\n- 🎨 Interfaz moderna y personalizable\n\n### 🆕 Primera versión\n\nEsta es la versión inicial de Timer Count.",
+  "pub_date": "2025-12-01T12:00:00Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "REEMPLAZAR_CON_FIRMA_AARCH64",
+      "url": "https://github.com/TU_USUARIO/timer-count/releases/download/v0.1.0/Timer Count_0.1.0_aarch64.dmg"
+    },
+    "darwin-x86_64": {
+      "signature": "REEMPLAZAR_CON_FIRMA_X64",
+      "url": "https://github.com/TU_USUARIO/timer-count/releases/download/v0.1.0/Timer Count_0.1.0_x64.dmg"
+    }
+  }
+}
