@@ -105,8 +105,8 @@ jobs:
               "${UPLOAD_URL}?name=latest.json" \
               --data-binary @latest.json
 
-            echo " latest.json uploaded successfully"
+            echo "SUCCESS: latest.json uploaded successfully"
           else
-            echo "L Could not find .app.tar.gz or .sig file"
+            echo "ERROR: Could not find .app.tar.gz or .sig file"
             exit 1
           fi
