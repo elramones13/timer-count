@@ -60,8 +60,19 @@ jobs:
 
           UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r .upload_url | sed 's/{?name,label}//')
 
-          # Find the .app.tar.gz file and its signature
-          APP_FILE=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app.tar.gz" ! -name "*.sig" -type f | head -n 1)
+          # Find the .app.tar.gz file and its signature - search in all possible locations
+          echo "Searching for .app.tar.gz files..."
+          find src-tauri/target -name "*.app.tar.gz" -type f 2>/dev/null || true
+
+          APP_FILE=$(find src-tauri/target -name "*.app.tar.gz" ! -name "*.sig" -type f 2>/dev/null | head -n 1)
+
+          if [ -z "$APP_FILE" ]; then
+            echo "ERROR: No .app.tar.gz file found in src-tauri/target"
+            echo "Available files:"
+            find src-tauri/target -type f -name "*.tar.gz" 2>/dev/null || echo "No tar.gz files found"
+            exit 1
+          fi
+
           SIG_FILE="${APP_FILE}.sig"
 
           if [ -f "$APP_FILE" ] && [ -f "$SIG_FILE" ]; then
