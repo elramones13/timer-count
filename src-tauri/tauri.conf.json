@@ -44,7 +44,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUwODY2ODZGRTk1NjY0ODgKUldTSVpGYnBiMmlHVUZaMnJmNkxJV0RoZi9sVS85cUREUzNleTZPZ1hZcm9ObktyN1d3YU15czMK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFCQTE4MUE4RjM0NjI1QTcKUldTbkpVYnpxSUdocTd5TFlubDNEWHUwMFd3czRKVmVtTmpwaWU1N2JoYkZ0MGVPalAwZnNxRE4K%",
       "endpoints": [
         "https://github.com/elramones13/timer-count/releases/latest/download/latest.json"
       ],
