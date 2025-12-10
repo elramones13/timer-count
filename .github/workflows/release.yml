@@ -50,74 +50,73 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get release info
+          # Wait a bit for tauri-action to finish uploading assets
+          sleep 10
+
           TAG_NAME="${{ github.ref_name }}"
           VERSION="${TAG_NAME#v}"
 
-          # Get the upload URL and release ID
+          echo "Fetching release information for tag: $TAG_NAME"
+
+          # Get release info and assets
           RELEASE_INFO=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG_NAME}")
 
-          UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r .upload_url | sed 's/{?name,label}//')
+          # Get list of assets
+          ASSETS=$(echo "$RELEASE_INFO" | jq -r '.assets[] | "\(.name)"')
+          echo "Available assets in release:"
+          echo "$ASSETS"
 
-          # Find the .app.tar.gz file and its signature - search in all possible locations
-          echo "Searching for .app.tar.gz files..."
-          find src-tauri/target -name "*.app.tar.gz" -type f 2>/dev/null || true
+          # Find the .app.tar.gz and .sig files from the release assets
+          APP_TAR_GZ=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | endswith(".app.tar.gz") and (endswith(".sig") | not)) | .name' | head -n 1)
+          SIG_FILE=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | endswith(".app.tar.gz.sig")) | .name' | head -n 1)
 
-          APP_FILE=$(find src-tauri/target -name "*.app.tar.gz" ! -name "*.sig" -type f 2>/dev/null | head -n 1)
-
-          if [ -z "$APP_FILE" ]; then
-            echo "ERROR: No .app.tar.gz file found in src-tauri/target"
-            echo "Available files:"
-            find src-tauri/target -type f -name "*.tar.gz" 2>/dev/null || echo "No tar.gz files found"
+          if [ -z "$APP_TAR_GZ" ] || [ -z "$SIG_FILE" ]; then
+            echo "ERROR: Could not find .app.tar.gz or .sig file in release assets"
+            echo "Found .app.tar.gz: $APP_TAR_GZ"
+            echo "Found .sig: $SIG_FILE"
             exit 1
           fi
 
-          SIG_FILE="${APP_FILE}.sig"
+          echo "Found app bundle: $APP_TAR_GZ"
+          echo "Found signature: $SIG_FILE"
 
-          if [ -f "$APP_FILE" ] && [ -f "$SIG_FILE" ]; then
-            # Read signature
-            SIGNATURE=$(cat "$SIG_FILE")
+          # Download the signature file content
+          SIG_URL=$(echo "$RELEASE_INFO" | jq -r ".assets[] | select(.name == \"$SIG_FILE\") | .browser_download_url")
+          SIGNATURE=$(curl -sL "$SIG_URL")
 
-            # Get download URL for the .app.tar.gz
-            DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/$(basename "$APP_FILE")"
+          # Build the download URL
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${APP_TAR_GZ}"
 
-            # Create latest.json
-            cat > latest.json << 'JSONEOF'
+          # Create latest.json
+          cat > latest.json << EOF
           {
-            "version": "VERSION_PLACEHOLDER",
-            "notes": "See release notes at https://github.com/REPO_PLACEHOLDER/releases/tag/TAG_PLACEHOLDER",
-            "pub_date": "DATE_PLACEHOLDER",
+            "version": "${VERSION}",
+            "notes": "See release notes at https://github.com/${{ github.repository }}/releases/tag/${TAG_NAME}",
+            "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "platforms": {
               "darwin-aarch64": {
-                "signature": "SIGNATURE_PLACEHOLDER",
-                "url": "URL_PLACEHOLDER"
+                "signature": "${SIGNATURE}",
+                "url": "${DOWNLOAD_URL}"
               },
               "darwin-x86_64": {
-                "signature": "SIGNATURE_PLACEHOLDER",
-                "url": "URL_PLACEHOLDER"
+                "signature": "${SIGNATURE}",
+                "url": "${DOWNLOAD_URL}"
               }
             }
           }
-          JSONEOF
+          EOF
 
-            # Replace placeholders
-            sed -i '' "s|VERSION_PLACEHOLDER|${VERSION}|g" latest.json
-            sed -i '' "s|REPO_PLACEHOLDER|${{ github.repository }}|g" latest.json
-            sed -i '' "s|TAG_PLACEHOLDER|${TAG_NAME}|g" latest.json
-            sed -i '' "s|DATE_PLACEHOLDER|$(date -u +"%Y-%m-%dT%H:%M:%SZ")|g" latest.json
-            sed -i '' "s|SIGNATURE_PLACEHOLDER|${SIGNATURE}|g" latest.json
-            sed -i '' "s|URL_PLACEHOLDER|${DOWNLOAD_URL}|g" latest.json
+          echo "Generated latest.json:"
+          cat latest.json
 
-            # Upload latest.json as release asset
-            curl -X POST \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/json" \
-              "${UPLOAD_URL}?name=latest.json" \
-              --data-binary @latest.json
+          # Upload latest.json as release asset
+          UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r .upload_url | sed 's/{?name,label}//')
 
-            echo "SUCCESS: latest.json uploaded successfully"
-          else
-            echo "ERROR: Could not find .app.tar.gz or .sig file"
-            exit 1
-          fi
+          curl -X POST \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            "${UPLOAD_URL}?name=latest.json" \
+            --data-binary @latest.json
+
+          echo "SUCCESS: latest.json uploaded successfully"
