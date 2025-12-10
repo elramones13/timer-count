@@ -9,6 +9,7 @@ import { sendNotification } from '@tauri-apps/plugin-notification';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import Projects from './views/Projects';
+import Stats from './views/Stats';
 import Reports from './views/Reports';
 import Calendar from './views/Calendar';
 import Timer from './views/Timer';
@@ -168,6 +169,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/timer" element={<Timer />} />

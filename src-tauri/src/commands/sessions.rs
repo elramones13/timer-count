@@ -235,6 +235,135 @@ pub fn update_session_notes(
 }
 
 #[tauri::command]
+pub fn update_session(
+    db: State<Mutex<Connection>>,
+    session_id: String,
+    project_id: String,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
+    notes: Option<String>,
+) -> Result<TimeSession, String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    let now = Utc::now();
+
+    // Calculate duration from start_time and end_time
+    let duration_seconds = (end_time - start_time).num_seconds();
+
+    // Ensure duration is positive
+    if duration_seconds < 0 {
+        return Err("End time must be after start time".to_string());
+    }
+
+    conn.execute(
+        "UPDATE time_sessions SET project_id = ?1, start_time = ?2, end_time = ?3,
+         duration_seconds = ?4, notes = ?5, updated_at = ?6 WHERE id = ?7",
+        rusqlite::params![
+            &project_id,
+            &start_time.to_rfc3339(),
+            &end_time.to_rfc3339(),
+            &duration_seconds,
+            &notes,
+            &now.to_rfc3339(),
+            &session_id
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    // Return the updated session
+    conn.query_row(
+        "SELECT id, project_id, start_time, end_time, duration_seconds, notes, is_running, created_at, updated_at
+         FROM time_sessions WHERE id = ?1",
+        [&session_id],
+        |row| {
+            Ok(TimeSession {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                start_time: row.get::<_, String>(2)?.parse().unwrap(),
+                end_time: row.get::<_, Option<String>>(3)?.map(|d| d.parse().unwrap()),
+                duration_seconds: row.get(4)?,
+                notes: row.get(5)?,
+                is_running: row.get::<_, i32>(6)? == 1,
+                created_at: row.get::<_, String>(7)?.parse().unwrap(),
+                updated_at: row.get::<_, String>(8)?.parse().unwrap(),
+            })
+        },
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn stop_all_running_sessions(db: State<Mutex<Connection>>) -> Result<Vec<TimeSession>, String> {
+    let conn = db.lock().map_err(|e| e.to_string())?;
+    let now = Utc::now();
+
+    // Get all running sessions
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, project_id, start_time FROM time_sessions WHERE is_running = 1"
+        )
+        .map_err(|e| e.to_string())?;
+
+    let running_sessions: Vec<(String, String, String)> = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    drop(stmt);
+
+    // Stop each session
+    let mut stopped_sessions = Vec::new();
+    for (session_id, _project_id, start_time_str) in running_sessions {
+        let start_time: DateTime<Utc> = start_time_str.parse().map_err(|e| format!("Parse error: {}", e))?;
+        let duration_seconds = (now - start_time).num_seconds();
+
+        conn.execute(
+            "UPDATE time_sessions SET end_time = ?1, duration_seconds = ?2, is_running = 0,
+             notes = COALESCE(notes, '') || ' [Auto-pausado]', updated_at = ?3 WHERE id = ?4",
+            rusqlite::params![
+                &now.to_rfc3339(),
+                &duration_seconds,
+                &now.to_rfc3339(),
+                &session_id
+            ],
+        )
+        .map_err(|e| e.to_string())?;
+
+        // Get the updated session
+        let session = conn
+            .query_row(
+                "SELECT id, project_id, start_time, end_time, duration_seconds, notes, is_running, created_at, updated_at
+                 FROM time_sessions WHERE id = ?1",
+                [&session_id],
+                |row| {
+                    Ok(TimeSession {
+                        id: row.get(0)?,
+                        project_id: row.get(1)?,
+                        start_time: row.get::<_, String>(2)?.parse().unwrap(),
+                        end_time: row.get::<_, Option<String>>(3)?.map(|d| d.parse().unwrap()),
+                        duration_seconds: row.get(4)?,
+                        notes: row.get(5)?,
+                        is_running: row.get::<_, i32>(6)? == 1,
+                        created_at: row.get::<_, String>(7)?.parse().unwrap(),
+                        updated_at: row.get::<_, String>(8)?.parse().unwrap(),
+                    })
+                },
+            )
+            .map_err(|e| e.to_string())?;
+
+        stopped_sessions.push(session);
+    }
+
+    Ok(stopped_sessions)
+}
+
+#[tauri::command]
 pub fn delete_session(db: State<Mutex<Connection>>, session_id: String) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
 

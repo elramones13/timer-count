@@ -23,23 +23,24 @@ export const useTauriCommands = () => {
         color?: string;
         priority: number;
         status: string;
-        estimatedHours?: number;
-        hoursPerDay?: number;
-        hoursPerWeek?: number;
-        deadline?: string;
-      }) =>
-        invoke<Project>('create_project', {
+        estimatedHours?: number | null;
+        hoursPerDay?: number | null;
+        hoursPerWeek?: number | null;
+        deadline?: string | null;
+      }) => {
+        return invoke<Project>('create_project', {
           name: data.name,
-          description: data.description,
-          client_id: data.clientId,
-          color: data.color,
+          description: data.description || null,
+          clientId: data.clientId || null,
+          color: data.color || null,
           priority: data.priority,
           status: data.status,
-          estimated_hours: data.estimatedHours,
-          hours_per_day: data.hoursPerDay,
-          hours_per_week: data.hoursPerWeek,
-          deadline: data.deadline,
-        }),
+          estimatedHours: data.estimatedHours ?? null,
+          hoursPerDay: data.hoursPerDay ?? null,
+          hoursPerWeek: data.hoursPerWeek ?? null,
+          deadline: data.deadline || null,
+        });
+      },
       update: (data: {
         id: string;
         name: string;
@@ -48,24 +49,25 @@ export const useTauriCommands = () => {
         color?: string;
         priority: number;
         status: string;
-        estimatedHours?: number;
-        hoursPerDay?: number;
-        hoursPerWeek?: number;
-        deadline?: string;
-      }) =>
-        invoke<Project>('update_project', {
+        estimatedHours?: number | null;
+        hoursPerDay?: number | null;
+        hoursPerWeek?: number | null;
+        deadline?: string | null;
+      }) => {
+        return invoke<Project>('update_project', {
           id: data.id,
           name: data.name,
-          description: data.description,
-          client_id: data.clientId,
-          color: data.color,
+          description: data.description || null,
+          clientId: data.clientId || null,
+          color: data.color || null,
           priority: data.priority,
           status: data.status,
-          estimated_hours: data.estimatedHours,
-          hours_per_day: data.hoursPerDay,
-          hours_per_week: data.hoursPerWeek,
-          deadline: data.deadline,
-        }),
+          estimatedHours: data.estimatedHours ?? null,
+          hoursPerDay: data.hoursPerDay ?? null,
+          hoursPerWeek: data.hoursPerWeek ?? null,
+          deadline: data.deadline || null,
+        });
+      },
       delete: (id: string) => invoke<void>('delete_project', { id }),
     },
 
@@ -79,6 +81,21 @@ export const useTauriCommands = () => {
         invoke<TimeSession>('stop_session', { sessionId, notes }),
       updateNotes: (sessionId: string, notes?: string) =>
         invoke<TimeSession>('update_session_notes', { sessionId, notes }),
+      update: (data: {
+        sessionId: string;
+        projectId: string;
+        startTime: string;
+        endTime: string;
+        notes?: string;
+      }) =>
+        invoke<TimeSession>('update_session', {
+          sessionId: data.sessionId,
+          projectId: data.projectId,
+          startTime: data.startTime,
+          endTime: data.endTime,
+          notes: data.notes,
+        }),
+      stopAllRunning: () => invoke<TimeSession[]>('stop_all_running_sessions'),
       delete: (sessionId: string) => invoke<void>('delete_session', { sessionId }),
     },
 

@@ -13,7 +13,7 @@ pub fn get_all_projects(db: State<Mutex<Connection>>) -> Result<Vec<Project>, St
         .prepare(
             "SELECT id, name, description, client_id, color, priority, status,
              estimated_hours, hours_per_day, hours_per_week, deadline, created_at, updated_at
-             FROM projects ORDER BY priority DESC, name ASC"
+             FROM projects ORDER BY deadline IS NULL, deadline ASC, priority DESC, name ASC"
         )
         .map_err(|e| e.to_string())?;
 

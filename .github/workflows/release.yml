@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Install dependencies (macOS only)
+        run: npm ci
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Timer Count v__VERSION__'
+          releaseBody: 'See the assets to download and install this version.'
+          releaseDraft: false
+          prerelease: false
+          args: --target universal-apple-darwin
+
+      - name: Generate and upload latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get release info
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${TAG_NAME#v}"
+
+          # Get the upload URL and release ID
+          RELEASE_INFO=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG_NAME}")
+
+          UPLOAD_URL=$(echo "$RELEASE_INFO" | jq -r .upload_url | sed 's/{?name,label}//')
+
+          # Find the .app.tar.gz file and its signature
+          APP_FILE=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name "*.app.tar.gz" ! -name "*.sig" -type f | head -n 1)
+          SIG_FILE="${APP_FILE}.sig"
+
+          if [ -f "$APP_FILE" ] && [ -f "$SIG_FILE" ]; then
+            # Read signature
+            SIGNATURE=$(cat "$SIG_FILE")
+
+            # Get download URL for the .app.tar.gz
+            DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/$(basename "$APP_FILE")"
+
+            # Create latest.json
+            cat > latest.json << 'JSONEOF'
+          {
+            "version": "VERSION_PLACEHOLDER",
+            "notes": "See release notes at https://github.com/REPO_PLACEHOLDER/releases/tag/TAG_PLACEHOLDER",
+            "pub_date": "DATE_PLACEHOLDER",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "SIGNATURE_PLACEHOLDER",
+                "url": "URL_PLACEHOLDER"
+              },
+              "darwin-x86_64": {
+                "signature": "SIGNATURE_PLACEHOLDER",
+                "url": "URL_PLACEHOLDER"
+              }
+            }
+          }
+          JSONEOF
+
+            # Replace placeholders
+            sed -i '' "s|VERSION_PLACEHOLDER|${VERSION}|g" latest.json
+            sed -i '' "s|REPO_PLACEHOLDER|${{ github.repository }}|g" latest.json
+            sed -i '' "s|TAG_PLACEHOLDER|${TAG_NAME}|g" latest.json
+            sed -i '' "s|DATE_PLACEHOLDER|$(date -u +"%Y-%m-%dT%H:%M:%SZ")|g" latest.json
+            sed -i '' "s|SIGNATURE_PLACEHOLDER|${SIGNATURE}|g" latest.json
+            sed -i '' "s|URL_PLACEHOLDER|${DOWNLOAD_URL}|g" latest.json
+
+            # Upload latest.json as release asset
+            curl -X POST \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/json" \
+              "${UPLOAD_URL}?name=latest.json" \
+              --data-binary @latest.json
+
+            echo " latest.json uploaded successfully"
+          else
+            echo "L Could not find .app.tar.gz or .sig file"
+            exit 1
+          fi

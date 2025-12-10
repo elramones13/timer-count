@@ -2,6 +2,7 @@ mod commands;
 mod database;
 mod models;
 mod tray_manager;
+mod system_events;
 
 use std::sync::Mutex;
 use tauri::Manager;
@@ -73,6 +74,11 @@ pub fn run() {
                             }
                         }
                         "quit" => {
+                            // Stop all running sessions before quitting
+                            if let Some(db) = app.try_state::<Mutex<rusqlite::Connection>>() {
+                                let _ = commands::sessions::stop_all_running_sessions(db.clone());
+                                println!("All running sessions stopped before app exit");
+                            }
                             app.exit(0);
                         }
                         id if id.starts_with("project_") => {
@@ -130,6 +136,9 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // Setup system event listeners for detecting sleep/lock
+            system_events::setup_system_event_listeners(app);
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -159,6 +168,8 @@ pub fn run() {
             commands::sessions::start_session,
             commands::sessions::stop_session,
             commands::sessions::update_session_notes,
+            commands::sessions::update_session,
+            commands::sessions::stop_all_running_sessions,
             commands::sessions::delete_session,
             // Stats commands
             commands::stats::get_project_stats,

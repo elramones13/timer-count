@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Trash2, ChevronDown, ChevronRight, CalendarCheck } from 'lucide-react';
+import { Calendar, Clock, Trash2, ChevronDown, ChevronRight, CalendarCheck, Edit } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useTauriCommands } from '../hooks/useTauriCommands';
@@ -14,6 +14,14 @@ const Reports = () => {
   const [allSessions, setAllSessions] = useState<TimeSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [editingSession, setEditingSession] = useState<TimeSession | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    projectId: '',
+    startTime: '',
+    endTime: '',
+    notes: '',
+  });
 
   // Check if date parameter is provided in URL
   const urlDate = searchParams.get('date');
@@ -86,6 +94,58 @@ const Reports = () => {
       newExpanded.add(key);
     }
     setExpandedProjects(newExpanded);
+  };
+
+  // Handle edit session
+  const handleEdit = (session: TimeSession) => {
+    setEditingSession(session);
+
+    // Format dates for datetime-local input (YYYY-MM-DDTHH:MM)
+    const formatForInput = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    setEditFormData({
+      projectId: session.project_id,
+      startTime: formatForInput(new Date(session.start_time)),
+      endTime: session.end_time ? formatForInput(new Date(session.end_time)) : '',
+      notes: session.notes || '',
+    });
+    setShowEditModal(true);
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!editingSession) return;
+
+    try {
+      await tauri.sessions.update({
+        sessionId: editingSession.id,
+        projectId: editFormData.projectId,
+        startTime: new Date(editFormData.startTime).toISOString(),
+        endTime: new Date(editFormData.endTime).toISOString(),
+        notes: editFormData.notes || undefined,
+      });
+
+      setShowEditModal(false);
+      setEditingSession(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error updating session:', error);
+      alert(`Error al actualizar el registro: ${error}`);
+    }
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditingSession(null);
   };
 
   // Group sessions by date, then by project
@@ -280,13 +340,25 @@ const Reports = () => {
                                             </div>
                                           )}
                                         </div>
-                                        <button
-                                          onClick={handleDelete}
-                                          className="opacity-0 group-hover:opacity-100 p-2 text-red-600 hover:bg-red-50 rounded transition-opacity"
-                                          title="Borrar registro"
-                                        >
-                                          <Trash2 size={16} />
-                                        </button>
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleEdit(session);
+                                            }}
+                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                                            title="Editar registro"
+                                          >
+                                            <Edit size={16} />
+                                          </button>
+                                          <button
+                                            onClick={handleDelete}
+                                            className="p-2 text-red-600 hover:bg-red-50 rounded"
+                                            title="Borrar registro"
+                                          >
+                                            <Trash2 size={16} />
+                                          </button>
+                                        </div>
                                       </div>
                                     </div>
                                   );
@@ -300,6 +372,81 @@ const Reports = () => {
                 </div>
               );
             })}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-2xl font-bold mb-4">Editar Registro</h2>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Proyecto *</label>
+                <select
+                  value={editFormData.projectId}
+                  onChange={(e) => setEditFormData({ ...editFormData, projectId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
+                >
+                  <option value="">Seleccionar proyecto</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hora de inicio *</label>
+                <input
+                  type="datetime-local"
+                  value={editFormData.startTime}
+                  onChange={(e) => setEditFormData({ ...editFormData, startTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hora de fin *</label>
+                <input
+                  type="datetime-local"
+                  value={editFormData.endTime}
+                  onChange={(e) => setEditFormData({ ...editFormData, endTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                <textarea
+                  value={editFormData.notes}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Actualizar
+                </button>
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

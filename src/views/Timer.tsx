@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Timer as TimerIcon, Play, Pause, RotateCcw, Bell, Check } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { useTauriCommands } from '../hooks/useTauriCommands';
 import { sendNotification } from '@tauri-apps/plugin-notification';
+import { listen } from '@tauri-apps/api/event';
 
 const Timer = () => {
   const {
@@ -23,6 +25,51 @@ const Timer = () => {
     resetTimer,
   } = useStore();
   const tauri = useTauriCommands();
+
+  // Listen for system events and auto-pause timer
+  useEffect(() => {
+    const unlistenPromises: Promise<() => void>[] = [];
+
+    const handleSystemPause = async () => {
+      console.log('System event detected - auto-saving session');
+
+      // The backend already stopped all sessions automatically
+      if (timerIsRunning) {
+        // Stop the timer UI
+        setTimerIsRunning(false);
+
+        // Show notification that session was auto-saved
+        try {
+          const project = projects.find(p => p.id === timerProjectId);
+          const projectName = project?.name || 'Proyecto';
+          await sendNotification({
+            title: '⏸️ Sesión Auto-pausada',
+            body: `Tu sesión de ${projectName} se guardó automáticamente`,
+          });
+        } catch (notifError) {
+          console.error('Error sending notification:', notifError);
+        }
+
+        // Don't reset the timer completely - keep the session info
+        // so the user can see what was saved
+        // Just mark it as stopped
+        setTimerSessionId(null);
+        setTimerStartTime(null);
+      }
+    };
+
+    // Listen for screen lock
+    unlistenPromises.push(
+      listen('screen-lock', handleSystemPause)
+    );
+
+    // Cleanup listeners on unmount
+    return () => {
+      Promise.all(unlistenPromises).then(unlisteners => {
+        unlisteners.forEach(unlisten => unlisten());
+      });
+    };
+  }, [timerIsRunning, timerProjectId, projects, setTimerIsRunning, setTimerSessionId, setTimerStartTime]);
 
   const handleStart = async () => {
     // Validar que haya un proyecto seleccionado

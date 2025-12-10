@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderKanban,
+  TrendingUp,
   BarChart3,
   Calendar,
   Timer,
@@ -19,6 +20,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/projects', icon: FolderKanban, label: 'Projects' },
+    { path: '/stats', icon: TrendingUp, label: 'Stats' },
     { path: '/reports', icon: BarChart3, label: 'Reports' },
     { path: '/calendar', icon: Calendar, label: 'Calendar' },
     { path: '/timer', icon: Timer, label: 'Timer' },

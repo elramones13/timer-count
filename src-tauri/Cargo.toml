@@ -33,3 +33,8 @@ tokio = { version = "1", features = ["full"] }
 uuid = { version = "1.8", features = ["v4", "serde"] }
 printpdf = "0.7"
 image = "0.25"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.25"
+objc = "0.2"
+block = "0.1"

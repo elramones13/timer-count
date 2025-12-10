@@ -1,0 +1,57 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Rust
+/target
+/src-tauri/target
+Cargo.lock
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Backups (user data)
+backups/
+
+# Development tools
+.claude/
+
+# Instaladores y builds locales (NO subir a GitHub - son muy pesados)
+instaladores/
+*.dmg
+*.app.tar.gz
+*.app.tar.gz.sig
+
+# Archivos de documentación temporal/desarrollo (NO subir a GitHub)
+DEBUG_*.md
+NOTAS_DESARROLLO.md
+RESUMEN_SESION.md
+INSTRUCCIONES_*.md
+test_*.js
+
+# Tauri updater keys (NUNCA subir claves privadas)
+*.key
+!src-tauri/tauri.conf.json
