@@ -1,19 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { listen } from '@tauri-apps/api/event';
-import { convertFileSrc } from '@tauri-apps/api/core';
-import { resolveResource } from '@tauri-apps/api/path';
 import { useStore } from './store/useStore';
 import { useTauriCommands } from './hooks/useTauriCommands';
-import { sendNotification } from '@tauri-apps/plugin-notification';
 import Layout from './components/Layout';
 import Dashboard from './views/Dashboard';
 import Projects from './views/Projects';
 import Stats from './views/Stats';
 import Reports from './views/Reports';
 import Calendar from './views/Calendar';
-import Timer from './views/Timer';
+import Tiempo from './views/Tiempo';
+import TrayManager from './views/TrayManager';
 import Settings from './views/Settings';
+import type { Project } from './types';
+
+const TRAY_PINNED_KEY = 'tray_pinned_ids';
 
 function App() {
   const {
@@ -22,61 +23,13 @@ function App() {
     setSessions,
     runningSessions,
     setRunningSessions,
-    addSession,
-    updateSession,
-    timerProjectId,
-    timerTimeLeft,
-    timerIsRunning,
-    timerSessionId,
-    timerStartTime,
-    setTimerTimeLeft,
-    setTimerIsRunning,
-    resetTimer,
   } = useStore();
   const tauri = useTauriCommands();
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     loadData();
     setupTrayListeners();
-
-    // Cargar el sonido de alarma usando Tauri assets
-    const loadAlarmSound = async () => {
-      try {
-        const resourcePath = await resolveResource('alarm.mp3');
-        const assetUrl = convertFileSrc(resourcePath);
-        audioRef.current = new Audio(assetUrl);
-        console.log('Alarm sound loaded:', assetUrl);
-      } catch (error) {
-        console.error('Error loading alarm sound:', error);
-        // Fallback: try loading from public
-        audioRef.current = new Audio('/alarm.mp3');
-      }
-    };
-
-    loadAlarmSound();
   }, []);
-
-  // Timer logic - runs globally even when not on Timer page
-  useEffect(() => {
-    if (timerIsRunning && timerTimeLeft > 0) {
-      timerIntervalRef.current = setInterval(() => {
-        setTimerTimeLeft(timerTimeLeft - 1);
-        if (timerTimeLeft - 1 <= 0) {
-          handleTimerComplete();
-        }
-      }, 1000);
-    } else if (!timerIsRunning && timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-    }
-
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
-  }, [timerIsRunning, timerTimeLeft]);
 
   useEffect(() => {
     // Update tray menu when projects or running sessions change
@@ -102,7 +55,18 @@ function App() {
 
   const updateTrayMenu = async () => {
     try {
-      await tauri.tray.updateMenu(projects, runningSessions);
+      // Build tray list: active projects (A-Z) + pinned non-active projects (in saved order)
+      const pinnedIds: string[] = JSON.parse(localStorage.getItem(TRAY_PINNED_KEY) || '[]');
+
+      const activeProjects = projects
+        .filter((p) => p.status === 'active')
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const pinnedProjects = pinnedIds
+        .map((id) => projects.find((p) => p.id === id))
+        .filter((p): p is Project => p !== undefined && p.status !== 'active');
+
+      await tauri.tray.updateMenu([...activeProjects, ...pinnedProjects], runningSessions);
     } catch (error) {
       console.error('Error updating tray menu:', error);
     }
@@ -120,49 +84,6 @@ function App() {
     });
   };
 
-  const handleTimerComplete = async () => {
-    setTimerIsRunning(false);
-
-    // Reproducir sonido
-    if (audioRef.current) {
-      try {
-        audioRef.current.volume = 0.5; // Volumen al 50%
-        await audioRef.current.play();
-      } catch (err) {
-        console.error('Error playing sound:', err);
-      }
-    }
-
-    // Guardar la sesión si hay un proyecto seleccionado
-    if (timerProjectId && timerSessionId && timerStartTime) {
-      try {
-        const endTime = new Date().toISOString();
-        await tauri.sessions.stop(timerSessionId, endTime);
-        console.log('Sesión guardada correctamente');
-        // Reload data to show the new session
-        await loadData();
-      } catch (error) {
-        console.error('Error guardando sesión:', error);
-      }
-    }
-
-    // Enviar notificación
-    const project = projects.find(p => p.id === timerProjectId);
-    const projectName = project?.name || 'Temporizador';
-
-    try {
-      await sendNotification({
-        title: '⏰ Tiempo Completado',
-        body: `El temporizador de ${projectName} ha finalizado!`,
-      });
-    } catch (error) {
-      console.error('Error sending notification:', error);
-    }
-
-    // Resetear estados
-    resetTimer();
-  };
-
   return (
     <BrowserRouter>
       <Layout>
@@ -172,7 +93,8 @@ function App() {
           <Route path="/stats" element={<Stats />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/calendar" element={<Calendar />} />
-          <Route path="/timer" element={<Timer />} />
+          <Route path="/tiempo" element={<Tiempo />} />
+          <Route path="/tray" element={<TrayManager />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

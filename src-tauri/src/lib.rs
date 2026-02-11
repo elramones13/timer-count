@@ -28,11 +28,14 @@ pub fn run() {
             let conn = database::init_database(app.handle())?;
             app.manage(Mutex::new(conn));
 
-            // Build initial tray menu with projects
+            // Build initial tray menu with active projects only (fallback before React loads)
             let app_handle = app.handle();
-            let projects = commands::projects::get_all_projects(
+            let projects: Vec<_> = commands::projects::get_all_projects(
                 app.state::<Mutex<rusqlite::Connection>>()
-            ).unwrap_or_default();
+            ).unwrap_or_default()
+            .into_iter()
+            .filter(|p| p.status == "active")
+            .collect();
 
             let running_sessions = commands::sessions::get_running_sessions(
                 app.state::<Mutex<rusqlite::Connection>>()
@@ -45,25 +48,7 @@ pub fn run() {
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&initial_menu)
                 .show_menu_on_left_click(true)
-                .on_tray_icon_event(|tray, event| {
-                    use tauri::tray::TrayIconEvent;
-                    match event {
-                        TrayIconEvent::Enter { .. } => {
-                            // Update menu when mouse enters the tray icon (before click)
-                            let app = tray.app_handle();
-                            if let Ok(projects) = commands::projects::get_all_projects(
-                                app.state::<Mutex<rusqlite::Connection>>()
-                            ) {
-                                if let Ok(running) = commands::sessions::get_running_sessions(
-                                    app.state::<Mutex<rusqlite::Connection>>()
-                                ) {
-                                    let _ = tray_manager::update_tray_menu(&app, projects, running);
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                })
+                .on_tray_icon_event(|_tray, _event| {})
                 .on_menu_event(move |app, event| {
                     let event_id = event.id().as_ref();
                     match event_id {
@@ -183,6 +168,8 @@ pub fn run() {
             commands::export::save_daily_backup,
             commands::export::generate_pdf_report,
             commands::export::get_current_month_range,
+            // Notion commands
+            commands::notion::sync_sessions_to_notion,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -48,43 +48,43 @@ const TimerCard = ({ project, session, onStart, onStop }: TimerCardProps) => {
         borderColor: isRunning ? project.color || '#3b82f6' : '#e5e7eb',
       }}
     >
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+      <div className="p-3">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{project.name}</h3>
             {project.description && (
-              <p className="text-sm text-gray-500 mt-1">{project.description}</p>
+              <p className="text-xs text-gray-500 mt-0.5 truncate">{project.description}</p>
             )}
           </div>
           <div
-            className="w-3 h-3 rounded-full"
+            className="w-2.5 h-2.5 rounded-full ml-2 mt-0.5 flex-shrink-0"
             style={{ backgroundColor: project.color || '#3b82f6' }}
           />
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-2xl font-mono font-bold text-gray-900">
-            <Clock size={24} />
+          <div className="flex items-center gap-1.5 text-base font-mono font-bold text-gray-900">
+            <Clock size={16} />
             <span>{formatDuration(elapsed)}</span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {!isRunning ? (
               <button
                 onClick={onStart}
-                className="p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 title="Start timer"
               >
-                <Play size={20} />
+                <Play size={16} />
               </button>
             ) : (
               <>
                 <button
                   onClick={() => setShowNotes(!showNotes)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   title="Stop and add notes"
                 >
-                  <Square size={20} />
+                  <Square size={16} />
                 </button>
               </>
             )}
@@ -92,18 +92,18 @@ const TimerCard = ({ project, session, onStart, onStop }: TimerCardProps) => {
         </div>
 
         {showNotes && isRunning && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 space-y-2">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add notes about this session (optional)..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
+              className="w-full px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              rows={2}
             />
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <button
                 onClick={handleStop}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
                 Stop & Save
               </button>
@@ -112,7 +112,7 @@ const TimerCard = ({ project, session, onStart, onStop }: TimerCardProps) => {
                   setShowNotes(false);
                   setNotes('');
                 }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm"
               >
                 Cancel
               </button>

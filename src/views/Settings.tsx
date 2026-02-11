@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Download, FileText, Calendar, RefreshCw } from 'lucide-react';
+import { Download, FileText, Calendar, RefreshCw, Link } from 'lucide-react';
 import { useTauriCommands } from '../hooks/useTauriCommands';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { check } from '@tauri-apps/plugin-updater';
+
+const NOTION_TOKEN_KEY = 'notion_token';
+const NOTION_DB_KEY = 'notion_database_id';
+const NOTION_USER_KEY = 'notion_user_id';
 
 const Settings = () => {
   const tauri = useTauriCommands();
@@ -16,6 +20,12 @@ const Settings = () => {
   const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Notion config state
+  const [notionToken, setNotionToken] = useState('');
+  const [notionDatabaseId, setNotionDatabaseId] = useState('');
+  const [notionUserId, setNotionUserId] = useState('');
+  const [notionSaved, setNotionSaved] = useState(false);
+
   // Update states
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -27,7 +37,19 @@ const Settings = () => {
   useEffect(() => {
     // Set current month range as default for both PDF and Backup
     loadCurrentMonthRange();
+    // Load Notion config from localStorage
+    setNotionToken(localStorage.getItem(NOTION_TOKEN_KEY) || '');
+    setNotionDatabaseId(localStorage.getItem(NOTION_DB_KEY) || '');
+    setNotionUserId(localStorage.getItem(NOTION_USER_KEY) || '');
   }, []);
+
+  const handleSaveNotionConfig = () => {
+    localStorage.setItem(NOTION_TOKEN_KEY, notionToken.trim());
+    localStorage.setItem(NOTION_DB_KEY, notionDatabaseId.trim());
+    localStorage.setItem(NOTION_USER_KEY, notionUserId.trim());
+    setNotionSaved(true);
+    setTimeout(() => setNotionSaved(false), 2000);
+  };
 
   const loadCurrentMonthRange = async () => {
     try {
@@ -472,6 +494,75 @@ const Settings = () => {
               {loading ? 'Generando...' : 'Generar PDF'}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Notion Integration Section */}
+      <div className="mt-6 bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Link className="text-gray-700" size={24} />
+          <h2 className="text-xl font-semibold text-gray-900">Integración con Notion</h2>
+        </div>
+        <p className="text-gray-600 mb-4">
+          Configura tu integración para sincronizar sesiones de trabajo directamente a tu base de datos de Notion.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Integration Token <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="password"
+              value={notionToken}
+              onChange={(e) => setNotionToken(e.target.value)}
+              placeholder="secret_xxxxxxxxxxxxxxxxxxxx"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Crea una integración en notion.so/my-integrations y copia el token interno
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Database ID <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={notionDatabaseId}
+              onChange={(e) => setNotionDatabaseId(e.target.value)}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              ID de la base de datos "Timer count" en Notion (de la URL: notion.so/.../<strong>ID</strong>?v=...)
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notion User ID <span className="text-gray-400">(opcional)</span>
+            </label>
+            <input
+              type="text"
+              value={notionUserId}
+              onChange={(e) => setNotionUserId(e.target.value)}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Para rellenar el campo "Persona". Encuéntralo en notion.so/settings → cuenta
+            </p>
+          </div>
+
+          <button
+            onClick={handleSaveNotionConfig}
+            disabled={!notionToken || !notionDatabaseId}
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {notionSaved ? '¡Guardado!' : 'Guardar configuración Notion'}
+          </button>
         </div>
       </div>
 

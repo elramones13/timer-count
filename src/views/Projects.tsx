@@ -320,6 +320,12 @@ const Projects = () => {
       }
     });
 
+    const sort = (arr: Project[]) => arr.sort((a, b) => a.name.localeCompare(b.name));
+    sort(groups.active);
+    sort(groups.paused);
+    sort(groups.completed);
+    sort(groups.archived);
+
     return groups;
   };
 

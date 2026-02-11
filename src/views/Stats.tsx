@@ -37,10 +37,10 @@ const Stats = () => {
     return 'text-green-600';
   };
 
-  // Filter only active projects with estimated hours
-  const projectsWithEstimates = projects.filter(
-    p => p.estimated_hours && p.estimated_hours > 0
-  );
+  // Filter only projects with estimated hours, sorted alphabetically A-Z
+  const projectsWithEstimates = projects
+    .filter(p => p.estimated_hours && p.estimated_hours > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="p-8">

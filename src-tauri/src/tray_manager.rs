@@ -34,23 +34,27 @@ pub fn build_tray_menu<R: Runtime>(
 
     let mut menu_builder = MenuBuilder::new(app);
 
-    // Show running sessions at the top
+    // Show running sessions at the top, sorted A-Z by project name
     if running_sessions.is_empty() {
         let no_active = MenuItemBuilder::with_id("no_active", "No hay proyectos activos")
             .enabled(false)
             .build(app)?;
         menu_builder = menu_builder.item(&no_active);
     } else {
-        for session in &running_sessions {
-            if let Some(project) = projects.iter().find(|p| p.id == session.project_id) {
-                let duration = format_duration(&session.start_time);
-                let display_text = format!("▶ {} - {}", project.name, duration);
-                let item_id = format!("project_{}", project.id);
+        let mut running_with_projects: Vec<(&TimeSession, &Project)> = running_sessions
+            .iter()
+            .filter_map(|s| projects.iter().find(|p| p.id == s.project_id).map(|p| (s, p)))
+            .collect();
+        running_with_projects.sort_by(|a, b| a.1.name.to_lowercase().cmp(&b.1.name.to_lowercase()));
 
-                let active_item = MenuItemBuilder::with_id(&item_id, &display_text)
-                    .build(app)?;
-                menu_builder = menu_builder.item(&active_item);
-            }
+        for (session, project) in &running_with_projects {
+            let duration = format_duration(&session.start_time);
+            let display_text = format!("▶ {} - {}", project.name, duration);
+            let item_id = format!("project_{}", project.id);
+
+            let active_item = MenuItemBuilder::with_id(&item_id, &display_text)
+                .build(app)?;
+            menu_builder = menu_builder.item(&active_item);
         }
     }
 
@@ -58,21 +62,21 @@ pub fn build_tray_menu<R: Runtime>(
     let separator = PredefinedMenuItem::separator(app)?;
     menu_builder = menu_builder.item(&separator);
 
-    // Add all projects submenu
-    if !projects.is_empty() {
+    // Add projects submenu — show all projects passed (filtering is done by the caller), sorted A-Z
+    let mut tray_projects: Vec<_> = projects
+        .iter()
+        .filter(|p| !running_map.contains_key(&p.id))
+        .collect();
+    tray_projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
+    if !tray_projects.is_empty() {
         let mut projects_submenu = SubmenuBuilder::new(app, "Iniciar Proyecto");
 
-        for project in projects {
-            let project_id = project.id.clone();
-            let is_running = running_map.contains_key(&project_id);
-
-            // Only show projects that are not running
-            if !is_running {
-                let item_id = format!("project_{}", project_id);
-                let project_item = MenuItemBuilder::with_id(&item_id, &project.name)
-                    .build(app)?;
-                projects_submenu = projects_submenu.item(&project_item);
-            }
+        for project in tray_projects {
+            let item_id = format!("project_{}", project.id);
+            let project_item = MenuItemBuilder::with_id(&item_id, &project.name)
+                .build(app)?;
+            projects_submenu = projects_submenu.item(&project_item);
         }
 
         let projects_menu = projects_submenu.build()?;

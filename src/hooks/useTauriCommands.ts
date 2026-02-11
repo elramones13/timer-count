@@ -1,6 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { Client, Project, TimeSession, ProjectStats, DailyStats, ProjectTimeBreakdown } from '../types';
 
+export interface NotionSessionPayload {
+  project_name: string;
+  date: string;           // YYYY-MM-DD
+  duration_minutes: number;
+  notes?: string | null;
+}
+
 export const useTauriCommands = () => {
   return {
     clients: {
@@ -123,6 +130,21 @@ export const useTauriCommands = () => {
         invoke<void>('generate_pdf_report', { startDate, endDate, filePath }),
       getCurrentMonthRange: () =>
         invoke<[string, string]>('get_current_month_range'),
+    },
+
+    notion: {
+      syncSessions: (
+        token: string,
+        databaseId: string,
+        notionUserId: string | null,
+        sessions: NotionSessionPayload[]
+      ) =>
+        invoke<number>('sync_sessions_to_notion', {
+          token,
+          databaseId,
+          notionUserId,
+          sessions,
+        }),
     },
   };
 };

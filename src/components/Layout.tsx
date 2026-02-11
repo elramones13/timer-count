@@ -6,7 +6,8 @@ import {
   TrendingUp,
   BarChart3,
   Calendar,
-  Timer,
+  Clock,
+  Monitor,
   Settings
 } from 'lucide-react';
 
@@ -23,7 +24,8 @@ const Layout = ({ children }: LayoutProps) => {
     { path: '/stats', icon: TrendingUp, label: 'Stats' },
     { path: '/reports', icon: BarChart3, label: 'Reports' },
     { path: '/calendar', icon: Calendar, label: 'Calendar' },
-    { path: '/timer', icon: Timer, label: 'Timer' },
+    { path: '/tiempo', icon: Clock, label: 'Tiempo' },
+    { path: '/tray', icon: Monitor, label: 'Tray' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 

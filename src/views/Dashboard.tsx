@@ -55,42 +55,28 @@ const Dashboard = () => {
   };
 
   const groupProjectsByStatus = () => {
-    const groups: {
-      [status: string]: {
-        withDeadline: Project[];
-        withoutDeadline: Project[];
-      };
-    } = {
-      active: { withDeadline: [], withoutDeadline: [] },
-      paused: { withDeadline: [], withoutDeadline: [] },
-      completed: { withDeadline: [], withoutDeadline: [] },
-      archived: { withDeadline: [], withoutDeadline: [] },
+    const groups: { [status: string]: Project[] } = {
+      active: [],
+      paused: [],
+      completed: [],
+      archived: [],
     };
 
     projects.forEach((project) => {
-      const statusGroup = groups[project.status];
-      if (!statusGroup) return;
-
-      if (project.deadline) {
-        statusGroup.withDeadline.push(project);
-      } else {
-        statusGroup.withoutDeadline.push(project);
+      if (groups[project.status]) {
+        groups[project.status].push(project);
       }
     });
 
-    // Sort projects with deadline by deadline date
+    // Sort each group alphabetically A-Z
     Object.values(groups).forEach((group) => {
-      group.withDeadline.sort((a, b) => {
-        const dateA = new Date(a.deadline!).getTime();
-        const dateB = new Date(b.deadline!).getTime();
-        return dateA - dateB;
-      });
+      group.sort((a, b) => a.name.localeCompare(b.name));
     });
 
     return groups;
   };
 
-  const groupedProjects = groupProjectsByStatus();
+  const groupedProjects = groupProjectsByStatus() as { [status: string]: Project[] };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -137,7 +123,7 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             ⏱️ Cronómetros Activos ({runningSessions.length})
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {runningSessions.map((session) => {
               const project = projects.find((p) => p.id === session.project_id);
               if (!project) return null;
@@ -177,7 +163,7 @@ const Dashboard = () => {
           <div className="space-y-4">
             {(['active', 'paused', 'completed', 'archived'] as const).map((status) => {
               const group = groupedProjects[status];
-              const totalProjects = group.withDeadline.length + group.withoutDeadline.length;
+              const totalProjects = group.length;
 
               if (totalProjects === 0) return null;
 
@@ -203,24 +189,9 @@ const Dashboard = () => {
 
                   {/* Projects List */}
                   {isExpanded && (
-                    <div className="px-6 pb-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {/* Projects with Deadline first (sorted by deadline) */}
-                        {group.withDeadline.map((project) => {
-                          const runningSession = runningSessions.find((s) => s.project_id === project.id);
-                          return (
-                            <TimerCard
-                              key={project.id}
-                              project={project}
-                              session={runningSession}
-                              onStart={() => handleStartTimer(project.id)}
-                              onStop={(notes) => runningSession && handleStopTimer(runningSession.id, notes)}
-                            />
-                          );
-                        })}
-
-                        {/* Projects without Deadline */}
-                        {group.withoutDeadline.map((project) => {
+                    <div className="px-4 pb-4">
+                      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {group.map((project) => {
                           const runningSession = runningSessions.find((s) => s.project_id === project.id);
                           return (
                             <TimerCard

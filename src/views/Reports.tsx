@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Trash2, ChevronDown, ChevronRight, CalendarCheck, Edit } from 'lucide-react';
+import { Calendar, Clock, Trash2, ChevronDown, ChevronRight, CalendarCheck, Edit, Link } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { useTauriCommands } from '../hooks/useTauriCommands';
 import type { DailyStats, TimeSession } from '../types';
 import { ask } from '@tauri-apps/plugin-dialog';
+
+const NOTION_TOKEN_KEY = 'notion_token';
+const NOTION_DB_KEY = 'notion_database_id';
+const NOTION_USER_KEY = 'notion_user_id';
 
 const Reports = () => {
   const { projects, removeSession } = useStore();
@@ -14,6 +18,8 @@ const Reports = () => {
   const [allSessions, setAllSessions] = useState<TimeSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [syncingDates, setSyncingDates] = useState<Set<string>>(new Set());
+  const [syncedDates, setSyncedDates] = useState<Set<string>>(new Set());
   const [editingSession, setEditingSession] = useState<TimeSession | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -148,6 +154,59 @@ const Reports = () => {
     setEditingSession(null);
   };
 
+  // Round minutes up to the nearest 5-minute interval
+  const roundUpTo5Min = (totalSeconds: number): number => {
+    const minutes = totalSeconds / 60;
+    return Math.ceil(minutes / 5) * 5;
+  };
+
+  const handleSyncToNotion = async (date: string, dateSessions: Record<string, TimeSession[]>) => {
+    const token = localStorage.getItem(NOTION_TOKEN_KEY) || '';
+    const databaseId = localStorage.getItem(NOTION_DB_KEY) || '';
+    const userId = localStorage.getItem(NOTION_USER_KEY) || null;
+
+    if (!token || !databaseId) {
+      alert('Configura el Token y Database ID de Notion en Configuración antes de sincronizar.');
+      return;
+    }
+
+    setSyncingDates((prev) => new Set(prev).add(date));
+    try {
+      // Group sessions by project and merge durations + notes
+      const payload = Object.entries(dateSessions)
+        .map(([projectId, sessions]) => {
+          const project = projects.find((p) => p.id === projectId);
+          const validSessions = sessions.filter((s) => s.end_time && s.duration_seconds);
+          const totalSeconds = validSessions.reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
+          const mergedNotes = validSessions
+            .map((s) => s.notes)
+            .filter(Boolean)
+            .join(' | ');
+
+          return {
+            project_name: project?.name || 'Proyecto desconocido',
+            date,
+            duration_minutes: roundUpTo5Min(totalSeconds),
+            notes: mergedNotes || null,
+          };
+        })
+        .filter((entry) => entry.duration_minutes > 0);
+
+      const count = await tauri.notion.syncSessions(token, databaseId, userId, payload);
+      setSyncedDates((prev) => new Set(prev).add(date));
+      alert(`¡${count} ${count === 1 ? 'proyecto sincronizado' : 'proyectos sincronizados'} con Notion!`);
+    } catch (error) {
+      console.error('Error syncing to Notion:', error);
+      alert(`Error al sincronizar con Notion: ${error}`);
+    } finally {
+      setSyncingDates((prev) => {
+        const next = new Set(prev);
+        next.delete(date);
+        return next;
+      });
+    }
+  };
+
   // Group sessions by date, then by project
   const sessionsByDate = allSessions
     .filter(session => {
@@ -238,9 +297,28 @@ const Reports = () => {
                       <h3 className="text-lg font-semibold text-gray-900 capitalize">
                         {formatDate(date)}
                       </h3>
-                      <div className="flex items-center gap-2 text-blue-600 font-semibold">
-                        <Clock size={18} />
-                        {formatHours(dayTotalHours)}
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleSyncToNotion(date, projectsData)}
+                          disabled={syncingDates.has(date)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            syncedDates.has(date)
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-900 text-white hover:bg-gray-700'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title="Sincronizar este día con Notion"
+                        >
+                          <Link size={14} />
+                          {syncingDates.has(date)
+                            ? 'Sincronizando...'
+                            : syncedDates.has(date)
+                            ? 'Sincronizado'
+                            : 'Notion'}
+                        </button>
+                        <div className="flex items-center gap-2 text-blue-600 font-semibold">
+                          <Clock size={18} />
+                          {formatHours(dayTotalHours)}
+                        </div>
                       </div>
                     </div>
                   </div>
